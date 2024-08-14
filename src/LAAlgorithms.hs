@@ -1,6 +1,9 @@
-module LAAlgorithms where
+module LAAlgorithms (
+    orthogonalizeAndNormalize, gsProcess, qrDecomp, qrEigenvalues, gaussJordanElimination
+) where
 
 import Matrices
+import Control.Monad (foldM)
 
 -- Helper function to perform vector subtraction and normalization
 orthogonalizeAndNormalize :: (Fractional a, Floating a) => Vec a -> [Vec a] -> Vec a

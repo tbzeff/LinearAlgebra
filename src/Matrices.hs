@@ -1,4 +1,10 @@
-module Matrices where
+module Matrices (
+    Vec (Vec), Mat (Mat), toVec, toMat, mapVec, numCols, numRows, isZero, rotateUp, 
+    rotateDown, swapRows, scaleRow, scale, applyPrecisionThreshold, magnitude,
+    normalize, vSubt, vAdd, getCol, getRow, vgetElem, mgetElem, mvMult,
+    mmMult, transposeMat, unwrapVec, unwrapMat, norm1, norm2, normi,
+    dotp, corr, proj
+) where
 
 import Data.Char (intToDigit)
 import Data.List (transpose)
