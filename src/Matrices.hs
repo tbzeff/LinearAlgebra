@@ -1,9 +1,10 @@
 module Matrices (
     Vec (Vec), Mat (Mat), toVec, toMat, mapVec, numCols, numRows, isZero, rotateUp, 
-    rotateDown, swapRows, scaleRow, scale, applyPrecisionThreshold, magnitude,
-    normalize, vSubt, vAdd, getCol, getRow, vgetElem, mgetElem, mvMult,
-    mmMult, transposeMat, unwrapVec, unwrapMat, norm1, norm2, normi,
-    dotp, corr, proj
+    rotateDown, swapRows, scaleRow, scale, applyPrecisionThreshold, 
+    applyPrecisionVec, applyPrecisionMat, magnitude, normalize, vSubt, vAdd,
+    getCol, getRow, vgetElem, mgetElem, mvMult, mmMult, transposeMat, unwrapVec,
+    unwrapMat, norm1, norm2, normi, dotp, corr, proj, deleteCol, deleteRow,
+    prettyPrintVec, prettyPrintMat, cofactor, minor, determinant
 ) where
 
 import Data.Char (intToDigit)
@@ -11,6 +12,15 @@ import Data.List (transpose)
 
 data Vec a = Vec [a] deriving (Eq, Show)
 data Mat a = Mat [Vec a] deriving (Eq, Show)
+
+-- Function to pretty print a Vec a
+prettyPrintVec :: Show a => Vec a -> String
+prettyPrintVec (Vec xs) = unwords (map show xs)
+
+-- Function to pretty print a Mat a
+prettyPrintMat :: Show a => Mat a -> IO ()
+prettyPrintMat m = putStrLn $ unlines (map prettyPrintVec tm)
+    where (Mat tm) = transposeMat m
 
 toVec :: [a] -> Vec a
 toVec v = Vec v
@@ -64,13 +74,21 @@ scaleRow i c m = if i < 1 || (length tm) < i
 scale :: Fractional a => a -> Vec a -> Vec a
 scale c u = mapVec (*c) u
 
-applyPrecisionThreshold :: (Integral a, RealFrac a) => a -> a -> a
+applyPrecisionThreshold :: (RealFrac a) => a -> a -> a
 applyPrecisionThreshold threshold x 
-    | abs x < threshold = 0
-    | abs x > highThresh = rounded
+    | roundedCondition = rounded
     | otherwise = x
-    where rounded = round x
-          highThresh = (abs rounded) - threshold
+    where rounded = fromIntegral $ round x
+          roundedCondition = 
+            if (abs x) - (abs rounded) < 0 
+            then (abs rounded) - threshold < (abs x) 
+            else (abs rounded) + threshold > (abs x)
+
+applyPrecisionVec :: (RealFrac a) => a -> Vec a -> Vec a
+applyPrecisionVec threshold v = mapVec (\x -> applyPrecisionThreshold threshold x) v
+
+applyPrecisionMat :: (RealFrac a) => a -> Mat a -> Mat a
+applyPrecisionMat threshold (Mat m) = Mat $ map (\v -> applyPrecisionVec threshold v) m
 
 magnitude :: (Fractional a, Floating a) => Vec a -> a
 magnitude (Vec v) = sqrt . sum $ map (^2) v
@@ -92,6 +110,13 @@ getCol i (Mat a) = (a !! i)
 getRow :: Int -> Mat a -> Vec a
 getRow j m = getCol j $ transposeMat m
 
+deleteCol :: Eq a => Int -> Mat a -> Mat a
+deleteCol i (Mat m) = Mat $ filter (/= (getCol i (Mat m))) m
+
+deleteRow :: Eq a => Int -> Mat a -> Mat a
+deleteRow j (Mat m) = transposeMat $ Mat $ filter (/= (getRow j (Mat m))) tm
+    where (Mat tm) = transposeMat (Mat m)
+
 -- Get element at index i from a vector
 vgetElem :: Int -> Vec a -> a
 vgetElem i (Vec u) = u !! i
@@ -101,21 +126,21 @@ mgetElem :: Int -> Int -> Mat a -> a
 mgetElem i j mat = vgetElem i (getCol j mat)
 
 -- Matrix-vector multiplication
-mvMult :: Num a => Vec a -> Mat a -> Vec a
+mvMult :: (RealFrac a, Floating a) => Vec a -> Mat a -> Vec a
 mvMult vec m = Vec [dotp vec row | row <- tm]
     where (Mat tm) = transposeMat m
 
 -- Matrix-matrix multiplication
-mmMult :: Num a => Mat a -> Mat a -> Mat a
+mmMult :: (RealFrac a, Floating a) => Mat a -> Mat a -> Mat a
 mmMult (Mat a) matB = Mat [mvMult col matB | col <- a]
 
 -- Vector-matrix product (recursive implementation)
-_vmprod :: Num a => Vec a -> Mat a -> [a]
+_vmprod :: (RealFrac a, Floating a) => Vec a -> Mat a -> [a]
 _vmprod (Vec a) (Mat []) = []
 _vmprod (Vec a) (Mat (x:xs)) = (dotp (Vec a) x) : (_vmprod (Vec a) (Mat xs))
 
 -- Vector-matrix product (wrapper function)
-vmprod_ :: Num a => Vec a -> Mat a -> [a]
+vmprod_ :: (RealFrac a, Floating a) => Vec a -> Mat a -> [a]
 vmprod_ vec mat = _vmprod vec mat
 
 -- Transpose a matrix
@@ -137,7 +162,7 @@ norm1 :: Num a => Vec a -> a
 norm1 (Vec u) = sum (map abs u)
 
 -- Compute L2 norm of a vector
-norm2 :: (Floating a) => Vec a -> a
+norm2 :: (RealFrac a, Floating a) => Vec a -> a
 norm2 (Vec u) = sqrt (sum (map (^2) u))
 
 -- Compute infinity norm of a vector
@@ -145,14 +170,29 @@ normi :: (Ord a, Num a) => Vec a -> a
 normi (Vec u) = maximum (map abs u)
 
 -- Dot product of two vectors
-dotp :: Num a => Vec a -> Vec a -> a
+dotp :: (RealFrac a, Floating a) => Vec a -> Vec a -> a
 dotp (Vec u) (Vec v) = sum $ zipWith (*) u v
 
 -- Correlation between two vectors
-corr :: (Floating a) => Vec a -> Vec a -> a
+corr :: (RealFrac a, Floating a) => Vec a -> Vec a -> a
 corr vec1 vec2 = (dotp vec1 vec2) / ((norm2 vec1) * (norm2 vec2))
 
 -- Projection of vector v onto vector u
-proj :: (Fractional a) => Vec a -> Vec a -> Vec a
+proj :: (RealFrac a, Floating a) => Vec a -> Vec a -> Vec a
 proj vecV vecU = scale scalar vecU
     where scalar = (dotp vecV vecU) / (dotp vecU vecU)
+
+minor :: (Floating a, Eq a) => Int -> Int -> Mat a -> a
+minor i j m = determinant $ deleteRow j $ deleteCol i m
+
+cofactor :: (Floating a, Eq a, Floating a) => Int -> Int -> Mat a -> a
+cofactor i j m = ((-1) ** fromIntegral (i + j)) * (minor i j m)
+
+det2x2 :: (Num a) => Mat a -> a
+det2x2 m = ((mgetElem 0 0 m) * (mgetElem 1 1 m)) - ((mgetElem 1 0 m) * (mgetElem 0 1 m))
+
+determinant :: (Floating a, Eq a) => Mat a -> a
+determinant (Mat [Vec [x]]) = x  -- Base case for 1x1 matrix
+determinant mat@(Mat m)
+    | numCols mat == 2 = det2x2 mat
+    | otherwise = sum [cofactor i 0 mat * mgetElem 0 i mat | i <- [0..numCols mat - 1]]

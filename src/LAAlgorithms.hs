@@ -1,35 +1,35 @@
 module LAAlgorithms (
-    orthogonalizeAndNormalize, gsProcess, qrDecomp, qrEigenvalues, gaussJordanElimination
+    orthogonalizeAndNormalize, gsProcess, qrDecomp, qrAlgorithm, gaussJordanElimination
 ) where
 
 import Matrices
 import Control.Monad (foldM)
 
 -- Helper function to perform vector subtraction and normalization
-orthogonalizeAndNormalize :: (Fractional a, Floating a) => Vec a -> [Vec a] -> Vec a
+orthogonalizeAndNormalize :: (RealFrac a, Floating a) => Vec a -> [Vec a] -> Vec a
 orthogonalizeAndNormalize v [] = normalize v
 orthogonalizeAndNormalize v (x:xs) = orthogonalizeAndNormalize (v `vSubt` (proj v x)) xs
 
 -- Gram-Schmidt process
-gsProcess :: (Fractional a, Floating a) => Mat a -> Mat a -> Mat a
+gsProcess :: (RealFrac a, Floating a) => Mat a -> Mat a -> Mat a
 gsProcess (Mat n) (Mat []) = Mat (map normalize n)
 gsProcess (Mat n) (Mat m)
     | null n = gsProcess (Mat [head m]) (Mat (tail m))
     | otherwise = gsProcess (Mat (n ++ [nextVec])) (Mat (tail m))
     where nextVec = orthogonalizeAndNormalize (head m) n
 
-qrDecomp :: (Integral a, RealFrac a, Floating a) => Mat a -> (Mat a, Mat a)
-qrDecomp m = (q, roundedR)
+qrDecomp :: (RealFrac a, Floating a) => Mat a -> (Mat a, Mat a)
+qrDecomp m = (q, r)
     where q = gsProcess (Mat []) m
-          (Mat r) = mmMult m (transposeMat q)
-          roundedR = Mat (map (\x -> mapVec (\y -> applyPrecisionThreshold (10**(-12)) y) x) r)
+          r = applyPrecisionMat (10**(-12)) $ mmMult m (transposeMat q)
 
-qrEigenvalues :: (Integral a, RealFrac a, Floating a) => Mat a -> Mat a
-qrEigenvalues mat
+-- QR algorithm to find the eigenvalues of a matrix
+qrAlgorithm :: (RealFrac a, Floating a) => Mat a -> Mat a
+qrAlgorithm mat
     | mat == newMat = mat
-    | otherwise = qrEigenvalues newMat
+    | otherwise = qrAlgorithm newMat
     where qr = qrDecomp mat
-          newMat = mmMult (fst qr) (snd qr)
+          newMat = mmMult (fst qr) (snd qr) 
 
 -- Recursive helper function
 go :: (Fractional a, Eq a) => Mat a -> Int -> Int -> Mat a
