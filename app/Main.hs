@@ -32,4 +32,7 @@ testQR = do
     else do 
         putStrLn "Q*R /= A"
         putStrLn $ "Q*R = " ++ (show multiplied)
+    putStrLn ""
+    putStrLn "Eigenvalues from QR Algorithm:"
+    prettyPrintMat $ qrAlgorithm mat
         

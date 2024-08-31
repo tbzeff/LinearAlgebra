@@ -196,3 +196,20 @@ determinant (Mat [Vec [x]]) = x  -- Base case for 1x1 matrix
 determinant mat@(Mat m)
     | numCols mat == 2 = det2x2 mat
     | otherwise = sum [cofactor i 0 mat * mgetElem 0 i mat | i <- [0..numCols mat - 1]]
+
+-- increase the "cell depth" of a matrix
+increaseDepth :: (Eq a) => Mat a -> Mat a
+increaseDepth (Mat m) = transposeMat finish
+    where 
+        expCols [] = []
+        expCols (x:xs) = x : x : expCols xs
+        (Mat expRows) = transposeMat (Mat (expCols m))
+        finish = Mat $ expCols expRows
+
+decreaseDepth :: (Eq a) => Mat a -> Mat a
+decreaseDepth (Mat m) = transposeMat reducedCols
+    where
+        reduceCols [] = []
+        reduceCols (x:y:xs) = x : reduceCols xs
+        (Mat reducedRows) = transposeMat (Mat (reduceCols m))
+        reducedCols = Mat $ reduceCols reducedRows
