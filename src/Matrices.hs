@@ -28,6 +28,9 @@ toVec v = Vec v
 toMat :: [[a]] -> Mat a
 toMat m = Mat (map toVec m)
 
+identity :: Num a => Int -> Mat a
+identity n = toMat [ [if i == j then 1 else 0 | j <- [1..n]] | i <- [1..n]]
+
 -- Helper function to map over a Vec
 mapVec :: (a -> b) -> Vec a -> Vec b
 mapVec f (Vec u) = Vec (map f u)
@@ -101,6 +104,20 @@ vSubt (Vec m) (Vec n) = Vec (zipWith (-) m n)
 
 vAdd :: Num a => Vec a -> Vec a -> Vec a
 vAdd (Vec m) (Vec n) = Vec (zipWith (+) m n)
+
+mSubt :: Num a => Mat a -> Mat a -> Mat a
+mSubt (Mat m) (Mat n) = Mat (recurse m n) 
+    where 
+        recurse _ [] = []
+        recurse [] _ = []
+        recurse (x:xs) (y:ys) = vSubt x y : recurse xs ys
+
+mAdd :: Num a => Mat a -> Mat a -> Mat a
+mAdd (Mat m) (Mat n) = Mat (recurse m n) 
+    where 
+        recurse _ [] = []
+        recurse [] _ = []
+        recurse (x:xs) (y:ys) = vAdd x y : recurse xs ys
 
 -- Get column i from a matrix
 getCol :: Int -> Mat a -> Vec a

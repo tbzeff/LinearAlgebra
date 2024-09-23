@@ -24,13 +24,13 @@ qrDecomp m = (q, r)
           r = applyPrecisionMat (10**(-12)) $ mmMult m (transposeMat q)
 
 -- QR algorithm to find the eigenvalues of a matrix
-qrAlgorithm :: (RealFrac a, Floating a) => Int -> Mat a -> Mat a
-qrAlgorithm 0 mat = mat
+qrAlgorithm :: (RealFrac a, Floating a) => Int -> Mat a -> [a]
 qrAlgorithm i mat
-    | mat == newMat = mat
+    | i == 0 || mat == newMat = extractDiagonal mat
     | otherwise = qrAlgorithm (i - 1) newMat
     where qr = qrDecomp mat
           newMat = applyPrecisionMat (10**(-11)) $ mmMult (fst qr) (snd qr) 
+          extractDiagonal (Mat m) = [vgetElem i (m !! i) | i <- [0..(length m - 1)]]
 
 qraDebug :: (RealFrac a, Floating a) => Int -> Mat a -> Mat a
 qraDebug 0 mat = mat
@@ -38,10 +38,8 @@ qraDebug i mat =
     let qrd = qrDecomp mat
         q = fst qrd
         r = snd qrd
-
         next = applyPrecisionMat (10**(-11)) $ mmMult q r
     in qraDebug (i - 1) next
-
 
 -- Recursive helper function
 go :: (Fractional a, Eq a) => Mat a -> Int -> Int -> Mat a
